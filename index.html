@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>Filter Hub</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asal Gujarat - An AR Journey</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for a smooth transition */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Style for the iframe loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col h-screen overflow-hidden">
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="flex flex-col items-center justify-center text-center h-full p-8 fade-in">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Asal Gujarat</h1>
+        <p class="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl">Welcome to an augmented reality journey through the diverse and vibrant traditions of Gujarat. This experience showcases a collection of AR filters, each representing a unique regional attire. Press the button below to begin your cultural exploration.</p>
+        <button id="start-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-blue-700 transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+            Start Exploring
+        </button>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden flex-col h-full w-full">
+        <!-- iFrame container with loader -->
+        <div class="flex-grow bg-gray-900 relative">
+            <div id="loader-overlay" class="absolute inset-0 bg-gray-900 flex items-center justify-center z-10">
+                <div class="loader"></div>
+            </div>
+            <iframe id="ar-iframe" class="w-full h-full border-none" allow="camera; microphone"></iframe>
+        </div>
+        
+        <!-- Description and Navigation -->
+        <div id="info-panel" class="p-4 bg-white border-t-2 border-gray-200 shadow-md fade-in">
+            <div class="max-w-4xl mx-auto">
+                <h2 id="experience-title" class="text-xl font-bold text-gray-900 mb-1"></h2>
+                <p id="experience-description" class="text-gray-600 mb-4 h-16 md:h-12 overflow-auto"></p>
+                <div class="flex justify-between items-center">
+                    <button id="prev-btn" class="bg-gray-200 text-gray-700 font-medium py-2 px-6 rounded-lg hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                    <span id="step-counter" class="text-sm font-medium text-gray-500"></span>
+                    <button id="next-btn" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA ---
+            const experiences = [
+                {
+                    id: 'saurashtra',
+                    url: 'https://totaloutfit.netlify.app/',
+                    title: 'The Playful Boy of Saurashtra',
+                    description: 'This vibrant Kediyu and Dhoti set represents the playful, energetic spirit of Saurashtra\'s youth during Navratri celebrations. It is known for its intricate embroidery and frilled design.'
+                },
+                {
+                    id: 'patan',
+                    url: 'https://gagagra.netlify.app/',
+                    title: 'The Elegant Woman of Patan',
+                    description: 'Experience the royal elegance of North Gujarat. This look is inspired by the world-renowned Patola silk weavings of Patan, a symbol of sophistication and heritage.'
+                },
+                {
+                    id: 'kutch',
+                    url: 'https://kutchturban.netlify.app/',
+                    title: 'The Artisan Man of Kutch',
+                    description: 'This style showcases the pride of Kutchi craftsmen. The majestic Pagdi (turban) and rich embroidery are world-famous for their brilliant mirror work and bold patterns.'
+                }
+            ];
+            let currentIndex = 0;
+
+            // --- DOM ELEMENTS ---
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const appContainer = document.getElementById('app-container');
+            const startBtn = document.getElementById('start-btn');
+            const arIframe = document.getElementById('ar-iframe');
+            const loaderOverlay = document.getElementById('loader-overlay');
+            const titleEl = document.getElementById('experience-title');
+            const descriptionEl = document.getElementById('experience-description');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const stepCounter = document.getElementById('step-counter');
+
+            // --- FUNCTIONS ---
+            function updateExperience(index) {
+                if (index < 0 || index >= experiences.length) return;
+
+                currentIndex = index;
+                const experience = experiences[index];
+
+                // Show loader and update content
+                loaderOverlay.style.display = 'flex';
+                titleEl.textContent = experience.title;
+                descriptionEl.textContent = experience.description;
+                arIframe.src = experience.url;
+                
+                // FIX: Use URL hash instead of search params to avoid SecurityError in blob context.
+                const newUrlHash = '#' + experience.id;
+                if (window.location.hash !== newUrlHash) {
+                    window.history.pushState({ index: index }, '', newUrlHash);
+                }
+
+                // Update button states
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === experiences.length - 1;
+                
+                // Update step counter
+                stepCounter.textContent = `Step ${index + 1} of ${experiences.length}`;
+
+                // Add fade-in animation to the info panel
+                document.getElementById('info-panel').classList.remove('fade-in');
+                void document.getElementById('info-panel').offsetWidth; // Trigger reflow
+                document.getElementById('info-panel').classList.add('fade-in');
+            }
+
+            // --- EVENT LISTENERS ---
+            startBtn.addEventListener('click', () => {
+                welcomeScreen.style.display = 'none';
+                appContainer.style.display = 'flex';
+                appContainer.classList.add('fade-in');
+                updateExperience(0);
+            });
+
+            nextBtn.addEventListener('click', () => {
+                updateExperience(currentIndex + 1);
+            });
+
+            prevBtn.addEventListener('click', () => {
+                updateExperience(currentIndex - 1);
+            });
+            
+            arIframe.addEventListener('load', () => {
+                // Hide loader once the iframe content is loaded
+                loaderOverlay.style.display = 'none';
+            });
+
+            // Handle browser back/forward navigation
+            window.addEventListener('popstate', (event) => {
+                if (event.state && event.state.index !== undefined) {
+                    updateExperience(event.state.index);
+                } else {
+                    // If no state, go back to welcome screen
+                     appContainer.style.display = 'none';
+                     welcomeScreen.style.display = 'flex';
+                }
+            });
+
+            // Check URL on initial load
+            // FIX: Read from URL hash instead of search params.
+            const experienceId = window.location.hash.substring(1); // .substring(1) removes the leading '#'
+            const initialIndex = experiences.findIndex(exp => exp.id === experienceId);
+
+            if (initialIndex !== -1) {
+                welcomeScreen.style.display = 'none';
+                appContainer.style.display = 'flex';
+                updateExperience(initialIndex);
+            }
+        });
+    </script>
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
